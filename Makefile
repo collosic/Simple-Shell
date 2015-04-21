@@ -10,8 +10,8 @@ OBJ = shell.o
 %.o: %.c $(DEPS)
 	$(CC) -g -c -Wall -o $@ $< $(CFLAGS)
 
-record: $(OBJ)
+shell: $(OBJ)
 	gcc -o $@ $^ $(CFLAGS)
 
 clean:	
-	rm -f record *.o
+	rm -f shell *.o
