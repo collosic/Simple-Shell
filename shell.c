@@ -6,13 +6,12 @@
  * Student Names:   Scott Shin
  *                  Christin Collosi
  *                  Anna Alexander Lambrix
- *                  Cory Bryce Sauer
+ *                  Cody Bryce Sauer
  
  */
 
 // Include header files here
 #include "shell.h"
-
 
 int main()
 {
@@ -21,9 +20,8 @@ int main()
     
     //Signal handlers with wrapper Signal  installed
     Signal(SIGINT, int_handler); // for kbd interrupt (for foreground?)
-    Signal(SIGTSTP, tstp_handler); // for terminal z (for foreground?)
+    //Signal(SIGTSTP, tstp_handler); // for terminal z (for foreground?)
     Signal(SIGCHLD, child_handler); // when child is terminated 
-    
     
     while (1) {
         /* Read */
@@ -32,7 +30,6 @@ int main()
         if (feof(stdin)) {
             exit(0);
         }
-        
         /* Evaluate */
         eval(cmdline);
         fflush(stdout); // A: I added that crap bc the shell was acting weird after FG commands... 
@@ -41,6 +38,7 @@ int main()
     exit(0);
 }
 /* $end shellmain */
+
 
 /* $begin eval */
 /* eval - Evaluate a command line */
@@ -55,6 +53,7 @@ void eval(char *cmdline)
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
+    //A.
     
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);
@@ -62,11 +61,16 @@ void eval(char *cmdline)
         return;   /* Ignore empty lines */
     
     if (!builtin_command(argv)) {
-        //A:
         sigprocmask(SIG_BLOCK, &mask, 0);
+        //A.
+    
         if ((pid = Fork()) == 0) {   /* Child runs user job */
+            // A: added this one bc bg was killed when fg was running and ctrl-c was pressed
+            setpgid(0,0); 
+            //sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
             if (execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
+                
                 exit(0);
             }
         }
@@ -78,16 +82,24 @@ void eval(char *cmdline)
         
         /* Parent waits for foreground job to terminate */
         if (!bg) {
+        printf("adding to fg\n");
             addprocess(all_proc, pid, 'F'); // A: this is a foreground process
+            printf("Process # %d %s", pid, cmdline);
             int status;
             if (waitpid(pid, &status, 0) < 0)
                 unix_error("waitfg: waitpid error");
+            deleteprocess(all_proc, pid);
         }
         else {
+        printf("adding to bg\n");
             addprocess(all_proc, pid, 'B'); // A: this is a background process
             printf("Process # %d %s", pid, cmdline);
+            
         }
+            
+        //A:
         sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
+        //A.
     }
     return;
 }
@@ -100,23 +112,20 @@ int builtin_command(char **argv)
         int i;
         for(i =0; i<MAXPROCESS; i++){
             if(all_proc[i].cond == 'B'){
-            printf("before quit killing bg process # %d \n", all_proc[i].pid);
+                printf("before quit killing bg process # %d \n", all_proc[i].pid);
                 pid_t pid = all_proc[i].pid;
                 kill(pid, SIGKILL);
                 all_proc[i].cond = 'N';
                 all_proc[i].pid = 0;
-            
             }
         }
         exit(0);
-        
     }
     //A: just a bookkeeping built in to see what the heck we have in our struct array...
     if (!strcmp(argv[0], "all")) {
         show_all(all_proc);
         return 1;       
-    }   
-        
+    }
     if (!strcmp(argv[0], "&"))    /* Ignore singleton & */
         return 1;
     return 0;                     /* Not a builtin command */
@@ -172,7 +181,7 @@ char *Fgets(char *ptr, int n, FILE *stream)
 {
     char *rptr;
     if (((rptr = fgets(ptr, n, stream)) == NULL) && ferror(stream))
-    app_error("Fgets error");
+        app_error("Fgets error");
     return rptr;
 }
 /* $begin wait */
@@ -182,7 +191,7 @@ pid_t Wait(int *status)
 {
     pid_t pid;
     if ((pid  = wait(status)) < 0)
-    unix_error("Wait error");
+        unix_error("Wait error");
     return pid;
 }
 /* $end wait */
@@ -191,7 +200,7 @@ pid_t Waitpid(pid_t pid, int *iptr, int options)
 {
     pid_t retpid;
     if ((retpid  = waitpid(pid, iptr, options)) < 0) 
-    unix_error("Waitpid error");
+        unix_error("Waitpid error");
     return(retpid);
 }
 
@@ -215,7 +224,6 @@ void app_error(char *msg) /* Application error */
 // this is SIGINT
 void int_handler(int sig){
     pid_t pid;
-    //printf("we got int\n");
     int i;
     for(i = 0; i<MAXPROCESS; i++) {
         if(all_proc[i].cond== 'F'){
@@ -226,16 +234,11 @@ void int_handler(int sig){
             }
         }
     }
-    
     if(pid != 0)
         kill(pid, SIGINT);
     return;
 }
 
-//SIGTSTP
-void tstp_handler(int sig){
-    printf("we got tstsp do we need it?\n");
-}
 
 void child_handler(int sig){
     pid_t pid;
@@ -246,8 +249,9 @@ void child_handler(int sig){
         if(WIFEXITED(status) | WIFSIGNALED(status)) deleteprocess(all_proc, pid);
         if(WIFSTOPPED(status)) printf("we gotta do smth with stopped process?\n");
     }
+
     if(errno != ECHILD)
-    unix_error("waitpid err");
+        unix_error("waitpid err");
     //sleep(2);
     return;
 }
@@ -257,21 +261,31 @@ handler_t *Signal(int signum, handler_t *handler){
     action.sa_handler = handler;
     sigemptyset(&action.sa_mask);
     action.sa_flags = SA_RESTART;
-
+    
     if(sigaction(signum, &action, &old_action) < 0)
         unix_error("Signal Error");
     return(old_action.sa_handler);
 }
-    
+        
 int addprocess(struct process *all_proc, pid_t pid, char cond){
     if(pid < 1) return 0; // not adding nothing
     int i;
-    for(i = 0; i<MAXPROCESS; i++){ 
-        if(all_proc[i].pid == 0) { // adding something
-            all_proc[i].pid = pid;
-            all_proc[i].cond = cond;
-            return 1;
-        }
+    //we have a fg process record and just need to change it to another pid
+    if(cond == 'F' && has_fgprocess(all_proc) != 0){
+        for(i = 0; i<MAXPROCESS; i++){ 
+            if(all_proc[i].cond == 'F') { // adding something
+                all_proc[i].pid = pid;
+                return 1;
+            }
+        } // end of for loop
+    } else {
+        for(i = 0; i<MAXPROCESS; i++){ 
+            if(all_proc[i].pid == 0) { // adding something
+                all_proc[i].pid = pid;
+                all_proc[i].cond = cond;
+                return 1;
+            }
+        } // end of for loop
     }
     return 0; // not adding, some prob
 }
@@ -301,8 +315,22 @@ void create_proc(struct process *all_proc) {
 
 //just a bookkeeping fx to see all we have 
 void show_all(struct process *all_proc){
-    for(int i =0; i < MAXPROCESS; i++){
-        if(all_proc[i].pid != 0)
-            printf("we got process  %d  with state of %c\n", all_proc[i].pid, all_proc[i].cond);
+    int i;
+    for(i =0; i<MAXPROCESS; i++){
+        //if(all_proc[i].pid != 0){
+        printf("we got process  %d  - %c\n", all_proc[i].pid, all_proc[i].cond);
+        //}
     }
+}
+
+pid_t has_fgprocess(struct process *all_proc) {
+    int i;
+    pid_t pid;
+    for(i = 0; i<MAXPROCESS; i++) {
+        if(all_proc[i].cond == 'F') {
+            pid = all_proc[i].pid;
+            return pid;
+        }
+    }
+    return 0;
 }

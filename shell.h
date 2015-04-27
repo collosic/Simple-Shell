@@ -52,6 +52,7 @@ void create_proc(struct process *all_proc);
 int addprocess(struct process *all_proc, pid_t pid, char cond);
 int deleteprocess(struct process *all_proc, pid_t pid);
 void show_all(struct process *all_proc);
+pid_t has_fgprocess(struct process *all_proc);
 
 /* SIG Handlers */
 void int_handler(int sig);
