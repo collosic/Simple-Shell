@@ -1,5 +1,5 @@
 # Simple-Shell
-A simple shell for ICS 53 / Spring 2015.
+A simple shell for Lab2
 
 ## Program Summary:
 
