@@ -48,6 +48,7 @@ struct process all_proc[MAXPROCESS];
 void eval(char *cmdline);
 int parseline(char *buf, char **argv);
 int builtin_command(char **argv); 
+void IOredirect(char **argv);
 void create_proc(struct process *all_proc);
 int addprocess(struct process *all_proc, pid_t pid, char cond);
 int deleteprocess(struct process *all_proc, pid_t pid);
