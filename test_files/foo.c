@@ -4,13 +4,15 @@
 
 int main(int argc, char **argv) 
 {
-    int i, secs;
-
+    int secs;
+/*
     if (argc != 2) {
-	exit(0);
+        exit(0);
     }
-    secs = atoi(argv[1]);
-    for (i=0; i < secs; i++)
-	sleep(1);
+ */   
+    // sleep the program as many seconds as you wish
+    //secs = atoi(argv[1]);
+    sleep(7);
+
     exit(0);
 }

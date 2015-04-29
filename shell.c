@@ -33,7 +33,6 @@ int main()
         /* Evaluate */
         eval(cmdline);
         fflush(stdout); // A: I added that crap bc the shell was acting weird after FG commands... 
-        fflush(stdout);
     }
     exit(0);
 }
@@ -67,10 +66,11 @@ void eval(char *cmdline)
         if ((pid = Fork()) == 0) {   /* Child runs user job */
             // A: added this one bc bg was killed when fg was running and ctrl-c was pressed
             setpgid(0,0); 
-            //sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
-            if (execve(argv[0], argv, environ) < 0) {
+            sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
+            
+            // check and see if we are attempting to call shell itself and return an error
+            if (!strcmp(argv[0], "shell") || execv(argv[0], argv) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
-                
                 exit(0);
             }
         }
@@ -84,7 +84,6 @@ void eval(char *cmdline)
         if (!bg) {
         printf("adding to fg\n");
             addprocess(all_proc, pid, 'F'); // A: this is a foreground process
-            printf("Process # %d %s", pid, cmdline);
             int status;
             if (waitpid(pid, &status, 0) < 0)
                 unix_error("waitfg: waitpid error");
@@ -93,8 +92,6 @@ void eval(char *cmdline)
         else {
         printf("adding to bg\n");
             addprocess(all_proc, pid, 'B'); // A: this is a background process
-            printf("Process # %d %s", pid, cmdline);
-            
         }
             
         //A:
@@ -124,7 +121,7 @@ int builtin_command(char **argv)
     //A: just a bookkeeping built in to see what the heck we have in our struct array...
     if (!strcmp(argv[0], "all")) {
         show_all(all_proc);
-        return 1;       
+        return 1; 
     }
     if (!strcmp(argv[0], "&"))    /* Ignore singleton & */
         return 1;
@@ -250,9 +247,8 @@ void child_handler(int sig){
         if(WIFSTOPPED(status)) printf("we gotta do smth with stopped process?\n");
     }
 
-    if(errno != ECHILD)
+    if(pid < 0 && errno != ECHILD)
         unix_error("waitpid err");
-    //sleep(2);
     return;
 }
 
