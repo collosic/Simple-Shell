@@ -163,6 +163,28 @@ int parseline(char *buf, char **argv)
 }
 /* $end parseline */
 
+/* $begin IOredirect */
+/* IOredirect - redirect the io according to argv array */
+void IOredirect(char **argv){
+    printf("redircted");
+    int i;
+    for (i=0; i< sizeof(argv); i++) {
+        if (strcmp("<", argv[i]) == 0) {
+            int fd1 = open(argv[i + 1], O_RDONLY, 0);
+            dup2(fd1, 0);
+            close(fd1);
+            printf("redircted");
+        }
+        else if (strcmp(">", argv[i]) == 0) {
+            int fd2 = open(argv[i + 1], O_CREAT | O_WRONLY, 0);
+            dup2(fd2, STDOUT_FILENO);
+            close(fd2);
+        }
+    }
+    return;
+}
+/* $end IOredirect */
+
 /* $begin forkwrapper */
 pid_t Fork(void) 
 {
