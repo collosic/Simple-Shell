@@ -43,12 +43,14 @@ extern char **environ; /* Defined by libc */
 
 /* Global Variables */
 struct process all_proc[MAXPROCESS];
+static int fd_in, fd_out;
 
 /* function prototypes */
 void eval(char *cmdline);
 int parseline(char *buf, char **argv);
 int builtin_command(char **argv); 
 void IOredirect(char **argv);
+void restore_IO();
 void create_proc(struct process *all_proc);
 int addprocess(struct process *all_proc, pid_t pid, char cond);
 int deleteprocess(struct process *all_proc, pid_t pid);
