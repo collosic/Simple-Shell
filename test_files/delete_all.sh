@@ -3,4 +3,5 @@
 
 rm ../foo*
 rm ../hello
-
+rm ../record
+rm ../test.rec
