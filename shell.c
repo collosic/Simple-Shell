@@ -59,6 +59,11 @@ void eval(char *cmdline)
     if (argv[0] == NULL)
         return;   /* Ignore empty lines */
     
+    // store default io
+    fd_in = dup(STDIN_FILENO);
+    fd_out = dup(STDOUT_FILENO);
+
+    // redirect io
     IOredirect(argv);
     
     if (!builtin_command(argv)) {
@@ -100,6 +105,8 @@ void eval(char *cmdline)
         sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
         //A.
     }
+    // return io to default
+    restore_IO();
     return;
 }
 
@@ -167,14 +174,15 @@ int parseline(char *buf, char **argv)
 
 /* $begin IOredirect */
 /* IOredirect - redirect the io according to argv array */
-void IOredirect(char **argv){
+void IOredirect(char **argv) {
     int i;
-    for (i=0; i< sizeof(argv); i++) {
-        if (strcmp(argv[i], "<") == 0) {
-
+    for (i = 0; i < sizeof(argv); i++) {
+        if (argv[i] == NULL){
+            break;
+        }
+        else if (strcmp(argv[i], "<") == 0) {
             int fd1 = open(argv[i + 1], O_RDONLY);
-            if (fd1 < 0)
-            {
+            if (fd1 < 0) {
                 printf("input redirect fail");
                 exit(1);
             }
@@ -183,8 +191,7 @@ void IOredirect(char **argv){
         }
         else if (strcmp(argv[i], ">") == 0) {
             int fd2 = open(argv[i + 1], O_CREAT | O_WRONLY, 0644);
-            if (fd2 < 0)
-            {
+            if (fd2 < 0) {
                 printf("output redirect fail");
                 exit(1);
             }
@@ -195,6 +202,13 @@ void IOredirect(char **argv){
     return;
 }
 /* $end IOredirect */
+
+/* $begin restore_IO */
+void restore_IO(){
+    dup2(fd_in,STDIN_FILENO);
+    dup2(fd_out,STDOUT_FILENO);
+}
+/* $end restore_IO  */
 
 /* $begin forkwrapper */
 pid_t Fork(void) 
