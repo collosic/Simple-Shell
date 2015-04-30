@@ -63,8 +63,6 @@ void eval(char *cmdline)
     fd_in = dup(STDIN_FILENO);
     fd_out = dup(STDOUT_FILENO);
 
-    // redirect io
-    IOredirect(argv);
     
     if (!builtin_command(argv)) {
         sigprocmask(SIG_BLOCK, &mask, 0);
@@ -74,7 +72,8 @@ void eval(char *cmdline)
             // A: added this one bc bg was killed when fg was running and ctrl-c was pressed
             setpgid(0,0); 
             sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
-            
+            //redirect IO
+            IOredirect(argv); // moved from original location so it changes for each child process
             // check and see if we are attempting to call shell itself and return an error
             if (!strcmp(argv[0], "shell") || execv(argv[0], argv) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
