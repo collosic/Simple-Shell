@@ -26,6 +26,7 @@ int main()
     while (1) {
         /* Read */
         printf("shell53> ");
+        fflush(stdout);
         Fgets(cmdline, MAXLINE, stdin);
         if (feof(stdin)) {
             exit(0);
@@ -58,11 +59,14 @@ void eval(char *cmdline)
     bg = parseline(buf, argv);
     if (argv[0] == NULL)
         return;   /* Ignore empty lines */
-    
-    // store default io
-    fd_in = dup(STDIN_FILENO);
-    fd_out = dup(STDOUT_FILENO);
 
+    
+    if (argv[1] != NULL && (strcmp(argv[1], "<") || strcmp(argv[1], ">"))) {
+        //redirect IO
+        fd_in = dup(STDIN_FILENO);
+        fd_out = dup(STDOUT_FILENO);
+        IOredirect(argv); // moved from original location so it changes for each child process
+    }
     
     if (!builtin_command(argv)) {
         sigprocmask(SIG_BLOCK, &mask, 0);
@@ -72,9 +76,7 @@ void eval(char *cmdline)
             // A: added this one bc bg was killed when fg was running and ctrl-c was pressed
             setpgid(0,0); 
             sigprocmask(SIG_UNBLOCK, &mask, 0); // unblock sigchld signals
-            //redirect IO
-            IOredirect(argv); // moved from original location so it changes for each child process
-            // check and see if we are attempting to call shell itself and return an error
+                        // check and see if we are attempting to call shell itself and return an error
             if (!strcmp(argv[0], "shell") || execv(argv[0], argv) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
                 exit(0);
@@ -105,7 +107,9 @@ void eval(char *cmdline)
         //A.
     }
     // return io to default
-    restore_IO();
+    if (argv[1] != NULL && (strcmp(argv[1], "<") || strcmp(argv[1], ">"))) 
+        restore_IO();
+
     return;
 }
 
@@ -185,7 +189,7 @@ void IOredirect(char **argv) {
                 printf("input redirect fail");
                 exit(1);
             }
-            dup2(fd1, 0);
+            dup2(fd1, STDIN_FILENO);
             close(fd1);
         }
         else if (strcmp(argv[i], ">") == 0) {
