@@ -20,7 +20,7 @@ int main()
     
     //Signal handlers with wrapper Signal  installed
     Signal(SIGINT, int_handler); // for kbd interrupt (for foreground?)
-    //Signal(SIGTSTP, tstp_handler); // for terminal z (for foreground?)
+    Signal(SIGTSTP, tstp_handler); // for terminal z (for foreground?)
     Signal(SIGCHLD, child_handler); // when child is terminated 
     
     while (1) {
@@ -283,6 +283,25 @@ void int_handler(int sig){
     }
     if(pid != 0)
         kill(pid, SIGINT);
+    return;
+}
+
+/* start signal handler fx's*/
+// this is SIGTSTP
+void tstp_handler(int sig){
+    pid_t pid;
+    int i;
+    for(i = 0; i<MAXPROCESS; i++) {
+        if(all_proc[i].cond== 'F'){
+            pid = all_proc[i].pid;
+            if(pid != 0) {
+                all_proc[i].cond = 'N';
+                all_proc[i].pid = 0;
+            }
+        }
+    }
+    if(pid != 0)
+        kill(pid, SIGTSTP);
     return;
 }
 
