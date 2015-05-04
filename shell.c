@@ -90,7 +90,7 @@ void eval(char *cmdline)
         
         /* Parent waits for foreground job to terminate */
         if (!bg) {
-        printf("adding to fg\n");
+        //printf("adding to fg\n");
             addprocess(all_proc, pid, 'F'); // A: this is a foreground process
             int status;
             if (waitpid(pid, &status, 0) < 0)
@@ -98,7 +98,7 @@ void eval(char *cmdline)
             deleteprocess(all_proc, pid);
         }
         else {
-        printf("adding to bg\n");
+        //printf("adding to bg\n");
             addprocess(all_proc, pid, 'B'); // A: this is a background process
         }
             
@@ -286,33 +286,16 @@ void int_handler(int sig){
     return;
 }
 
-/* start signal handler fx's*/
-// this is SIGTSTP
-void tstp_handler(int sig){
-    pid_t pid;
-    int i;
-    for(i = 0; i<MAXPROCESS; i++) {
-        if(all_proc[i].cond== 'F'){
-            pid = all_proc[i].pid;
-            if(pid != 0) {
-                all_proc[i].cond = 'N';
-                all_proc[i].pid = 0;
-            }
-        }
-    }
-    if(pid != 0)
-        kill(pid, SIGTSTP);
-    return;
-}
-
-
 void child_handler(int sig){
     pid_t pid;
     int status;
     while((pid = waitpid(-1, &status, WNOHANG | WUNTRACED)) > 0) {
-        printf("Process # %d is reaped\n", (int)pid);
+       
         //A: this is status exit check from textbook... section 8.4
-        if(WIFEXITED(status) | WIFSIGNALED(status)) deleteprocess(all_proc, pid);
+        if(WIFEXITED(status) | WIFSIGNALED(status)) {
+          printf("Process # %d is reaped with status = %d\n", (int)pid, WIFEXITED(status));
+         deleteprocess(all_proc, pid);
+        }
         if(WIFSTOPPED(status)) printf("we gotta do smth with stopped process?\n");
     }
 
