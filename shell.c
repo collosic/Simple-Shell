@@ -7,7 +7,10 @@
  *                  Christin Collosi
  *                  Anna Alexander Lambrix
  *                  Cody Bryce Sauer
- 
+ *
+ * NOTES: use the makefile to compile, requires shell.h
+ *        or user $ gcc -o shell shell.c
+ *
  */
 
 // Include header files here
