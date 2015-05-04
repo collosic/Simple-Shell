@@ -20,7 +20,6 @@ int main()
     
     //Signal handlers with wrapper Signal  installed
     Signal(SIGINT, int_handler); // for kbd interrupt (for foreground?)
-    Signal(SIGTSTP, tstp_handler); // for terminal z (for foreground?)
     Signal(SIGCHLD, child_handler); // when child is terminated 
     
     while (1) {
